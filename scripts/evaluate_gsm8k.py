@@ -5,10 +5,9 @@ Running:
 
 ```
 python scripts/evaluate_safety.py \
-    --input-path <path_to_predictions.jsonl> \
+    --dataset-path <path_to_predictions.jsonl> \
     --model-name-or-path "/mnt/cs336-a5-supplement/models/Llama-3.3-70B-Instruct" \
     --num-gpus 2 \
-    --output-path <path_to_write_output.jsonl>
 ```
 """
 
@@ -22,8 +21,8 @@ import re
 from tqdm import tqdm
 from transformers import AutoTokenizer
 from vllm import LLM, SamplingParams
-from xopen import xopen
 from pathlib import Path
+from cs336_alignment import drgrpo_grader
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ def main(
 
     # Convert the responses into prompts
 
-    sampling_params = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=16)
+    sampling_params = SamplingParams(temperature=0.0, top_p=1.0, max_tokens=512)
     raw_responses = model.generate(questions, sampling_params)
     responses = []
     for output in raw_responses:
@@ -81,6 +80,12 @@ def main(
         responses.append(response)
     print(responses[:10])
     assert len(responses) == len(questions)
+    pos = 0
+    for idx, response in enumerate(responses):
+        ret = drgrpo_grader.r1_zero_reward_fn(response, answers[idx])
+        if ret:
+            pos += 1
+    print(f"Final result: {pos}/{len(responses)} of the results are correct")
 
 
 if __name__ == "__main__":
@@ -92,19 +97,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset-path",
         type=str,
-        required=True,
+        required=False,
         help="Path to file with model predictions (JSONL format with key 'output')",
     )
     parser.add_argument(
-        "--model-name-or-path", help="HF name of the model to use", required=True
+        "--model-name-or-path", help="HF name of the model to use", required=False
     )
     parser.add_argument("--num-gpus", help="Number of GPUs to use", type=int, default=1)
     args = parser.parse_args()
     logger.info("running %s", " ".join(sys.argv))
     main(
-        args.input_path,
-        args.model_name_or_path,
+        args.dataset_path if args.dataset_path else load_default_dataset(),
+        args.model_name_or_path if args.model_name_or_path else load_default_model(),
         args.num_gpus,
-        args.output_path,
     )
     logger.info("finished running %s", sys.argv[0])
