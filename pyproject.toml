@@ -43,11 +43,11 @@ environments = [
 
 [tool.uv.sources]
 torch = [
-    { index = "pytorch-cu129", extra = "gpu", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cu124", extra = "gpu", marker = "sys_platform == 'linux'" },
 ]
 [[tool.uv.index]]
-name = "pytorch-cu129"
-url = "https://download.pytorch.org/whl/cu129"
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [tool.pytest.ini_options]
