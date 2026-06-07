@@ -20,11 +20,32 @@ import re
 
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from vllm import LLM, SamplingParams
 from pathlib import Path
 from cs336_alignment import drgrpo_grader
+import modal
+
+app = modal.App(name="evaluate gsm8k")
+
 
 logger = logging.getLogger(__name__)
+
+REMOTE_ROOT = "/root"
+
+image = (
+    modal.Image.from_registry(
+        "nvidia/cuda:12.9.1-devel-ubuntu22.04",
+        add_python="3.12",
+    )
+    .uv_sync(extras=["gpu"])
+    .workdir(REMOTE_ROOT)
+    .add_local_dir("cs336_alignment", f"{REMOTE_ROOT}/cs336_alignment")
+    .add_local_dir("data", f"{REMOTE_ROOT}/data")
+    .add_local_dir("scripts", f"{REMOTE_ROOT}/scripts")
+    .add_local_file("pyproject.toml", f"{REMOTE_ROOT}/pyproject.toml")
+    .add_local_file("uv.lock", f"{REMOTE_ROOT}/uv.lock")
+)
+image = image.add_local_file("AGENTS.md", f"{REMOTE_ROOT}/AGENTS.md")
+image = image.add_local_file("CLAUDE.md", f"{REMOTE_ROOT}/CLAUDE.md")
 
 
 def load_default_dataset():
@@ -49,16 +70,19 @@ def load_prompt(
     return re.sub(r"\{(\w+)\}", replace, content)
 
 
+@app.function(timeout=3600, image=image, gpu="L4")
 def main(
     dataset_path=load_default_dataset(),
     model_name_or_path=load_default_model(),
     num_gpus=1,
 ):
+    from vllm import LLM, SamplingParams
+
     model = LLM(
         model=model_name_or_path,
         tensor_parallel_size=num_gpus,
         trust_remote_code=True,
-        max_model_len=6144,
+        max_model_len=4096,
     )
     # tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
     questions, answers = [], []
@@ -86,6 +110,20 @@ def main(
         if ret:
             pos += 1
     print(f"Final result: {pos}/{len(responses)} of the results are correct")
+    return True
+
+
+@app.local_entrypoint()
+def main_modal(
+    dataset_path: str = load_default_dataset(),
+    model_name_or_path: str = load_default_model(),
+    num_gpus: int = 1,
+):
+    return main.remote(
+        dataset_path,
+        model_name_or_path,
+        num_gpus,
+    )
 
 
 if __name__ == "__main__":
