@@ -23,7 +23,7 @@ gpu = [
     # community cp312/cu12/Torch 2.10 wheel to avoid source builds on Modal.
     "flash-attn @ https://github.com/lesj0610/flash-attention/releases/download/v2.8.3-cu12-torch2.10-cp312/flash_attn-2.8.3%2Bcu12torch2.10cxx11abiTRUE-cp312-cp312-linux_x86_64.whl ; sys_platform == 'linux' and platform_machine == 'x86_64'",
     "torch",
-    "vllm==0.6.0",
+    "vllm==0.19.0",
     "openai>=1.0.0",
     "wandb>=0.26.0",
 ]
@@ -43,11 +43,11 @@ environments = [
 
 [tool.uv.sources]
 torch = [
-    { index = "pytorch-cu124", extra = "gpu", marker = "sys_platform == 'linux'" },
+    { index = "pytorch-cu129", extra = "gpu", marker = "sys_platform == 'linux'" },
 ]
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu129"
+url = "https://download.pytorch.org/whl/cu129"
 explicit = true
 
 [tool.pytest.ini_options]
