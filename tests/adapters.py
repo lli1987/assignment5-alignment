@@ -9,7 +9,6 @@ from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizerBase
 
 
-
 def run_tokenize_prompt_and_output(
     prompt_strs: list[str],
     output_strs: list[str],
@@ -46,7 +45,9 @@ def run_tokenize_prompt_and_output(
                 with labels, with value 1 where the corresponding label token
                 is part of the response and 0 otherwise.
     """
-    raise NotImplementedError
+    from cs336_alignment import grpo
+
+    return grpo.tokenize_prompt_and_output(prompt_strs, output_strs, tokenizer)
 
 
 def run_get_response_log_probs(
