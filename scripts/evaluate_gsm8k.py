@@ -102,14 +102,29 @@ def main(
     for output in raw_responses:
         response = output.outputs[0].text.strip()
         responses.append(response)
-    print(responses[:10])
+    print("------------- response for 1st question --------------")
+    print(responses[0])
+    print("------------- answer for 1st question --------------")
+    print(answers[0])
+    print("------------- response for 2nd question --------------")
+    print(responses[1])
+    print("------------- answer for 2nd question --------------")
+    print(answers[1])
     assert len(responses) == len(questions)
-    pos = 0
+    format_reward, answer_reward = 0.0, 0.0
     for idx, response in enumerate(responses):
         ret = drgrpo_grader.r1_zero_reward_fn(response, answers[idx])
-        if ret:
-            pos += 1
-    print(f"Final result: {pos}/{len(responses)} of the results are correct")
+
+        if ret["format_reward"] > 0.0:
+            format_reward += 1.0
+        if ret["answer_reward"] > 0.0:
+            answer_reward += 1.0
+    print(
+        f"Final result for format: {format_reward/len(responses)} of the results are correct"
+    )
+    print(
+        f"Final result for answer: {answer_reward/len(responses)} of the results are correct"
+    )
     return True
 
 
