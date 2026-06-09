@@ -83,7 +83,9 @@ def run_get_response_log_probs(
                 entropy for each position (present only if
                 return_token_entropy=True).
     """
-    raise NotImplementedError
+    from cs336_alignment import grpo
+
+    return grpo.get_response_log_probs(model, input_ids, labels, return_token_entropy)
 
 
 def run_compute_rollout_rewards(

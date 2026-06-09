@@ -1,6 +1,5 @@
 import torch
-from transformers import PreTrainedTokenizer
-from torch.nn.utils.rnn import pad_sequence
+from transformers import PreTrainedTokenizer, PreTrainedModel
 
 
 def tokenize_prompt_and_output(
@@ -31,10 +30,29 @@ def tokenize_prompt_and_output(
 
     input_ids = torch.Tensor(input_ids_)
     labels = torch.Tensor(labels_)
-    response_mask = torch.zeros_like(labels, dtype=bool)
 
-    for row in range(labels.shape[0]):
-        for col in range(labels.shape[1]):
-            if col >= prompt_lengths[row] - 1 and labels[row][col] != 0:
-                response_mask[row][col] = 1
+    col_indices = torch.arange(labels.shape[1])
+    prompt_ends = torch.tensor(prompt_lengths) - 1
+    response_mask = (
+        (col_indices.unsqueeze(0) >= prompt_ends.unsqueeze(1)) & (labels != 0)
+    ).float()
+
     return {"input_ids": input_ids, "labels": labels, "response_mask": response_mask}
+
+
+def get_response_log_probs(
+    model: PreTrainedModel,
+    input_ids: torch.Tensor,
+    labels: torch.Tensor,
+    return_token_entropy: bool = False,
+) -> dict[str, torch.Tensor]:
+    logits = model(input_ids).logits  # [b, seq_len, vocab]
+    log_probs_all = torch.log_softmax(logits, dim=-1)  # [b, seq_len, vocab]
+    log_probs = torch.gather(log_probs_all, dim=-1, index=labels.unsqueeze(-1)).squeeze(
+        -1
+    )
+    if return_token_entropy:
+        probs = torch.exp(log_probs_all)
+        entropy = -torch.sum(probs * log_probs_all, dim=-1)
+        return {"log_probs": log_probs, "token_entropy": entropy}
+    return {"log_probs": log_probs}
