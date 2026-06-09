@@ -117,7 +117,9 @@ def run_compute_rollout_rewards(
                 Reward statistics to log. At minimum, include the mean total
                 and format rewards over the rollout batch.
     """
-    raise NotImplementedError
+    from cs336_alignment import grpo
+
+    return grpo.compute_rollout_rewards(reward_fn, rollout_responses, repeated_ground_truths)
 
 
 def run_compute_group_normalized_rewards(

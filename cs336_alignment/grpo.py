@@ -1,5 +1,6 @@
 import torch
 from transformers import PreTrainedTokenizer, PreTrainedModel
+from typing import Callable
 
 
 def tokenize_prompt_and_output(
@@ -56,3 +57,28 @@ def get_response_log_probs(
         entropy = -torch.sum(probs * log_probs_all, dim=-1)
         return {"log_probs": log_probs, "token_entropy": entropy}
     return {"log_probs": log_probs}
+
+
+def compute_rollout_rewards(
+    reward_fn: Callable[[str, str], dict[str, float]],
+    rollout_responses: list[str],
+    repeated_ground_truths: list[str],
+) -> tuple[torch.Tensor, dict[str, float]]:
+    rewards = []
+    format_tot = 0.0
+    reward_tot = 0.0
+    for i in range(len(rollout_responses)):
+        rollout_response = rollout_responses[i]
+        ground_truth = repeated_ground_truths[i]
+        response = reward_fn(rollout_response, ground_truth)
+        reward = response["reward"]
+        format_reward = response["format_reward"]
+        rewards.append(reward)
+        format_tot += format_reward
+        reward_tot += reward
+    raw_rewards = torch.Tensor(rewards)
+
+    return raw_rewards, {
+        "mean_total": reward_tot / len(rollout_responses),
+        "mean_format": format_reward / len(rollout_responses),
+    }
