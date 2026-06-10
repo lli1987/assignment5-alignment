@@ -102,3 +102,21 @@ def compute_group_normalized_rewards(
         raise NotImplementedError
     normalized = (rewards - mean) / (std + advantage_eps)
     return normalized.reshape(-1), {"mean": mean, "std": std}
+
+
+def compute_policy_gradient_loss(
+    raw_rewards_or_advantages: torch.Tensor,
+    policy_log_probs: torch.Tensor,
+    importance_reweighting_method: Literal["none", "noclip", "grpo", "gspo"] = "none",
+    old_log_probs: torch.Tensor | None = None,
+    cliprange: float | None = None,
+    response_mask: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    if importance_reweighting_method != "none":
+        raise NotImplementedError
+    lengths = None
+    if response_mask:
+        lengths = response_mask.sum(-1)
+    if lengths:
+        return -raw_rewards_or_advantages * policy_log_probs / lengths, {}
+    return -raw_rewards_or_advantages * policy_log_probs, {}
