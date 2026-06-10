@@ -1,6 +1,6 @@
 import torch
 from transformers import PreTrainedTokenizer, PreTrainedModel
-from typing import Callable
+from typing import Callable, Literal
 
 
 def tokenize_prompt_and_output(
@@ -82,3 +82,23 @@ def compute_rollout_rewards(
         "mean_total": reward_tot / len(rollout_responses),
         "mean_format": format_reward / len(rollout_responses),
     }
+
+
+def compute_group_normalized_rewards(
+    raw_rewards: torch.Tensor,
+    group_size: int,
+    baseline: Literal["mean", "none"] = "mean",
+    advantage_eps: float = 1e-6,
+    advantage_normalizer: Literal["std", "none", "mean"] = "std",
+):
+    rewards = raw_rewards.reshape(-1, group_size)
+    if baseline == "mean":
+        mean = rewards.mean(dim=-1)
+    else:
+        raise NotImplementedError
+    if advantage_normalizer == "std":
+        std = rewards.std(dim=-1)
+    else:
+        raise NotImplementedError
+    normalized = (rewards - mean) / (std + advantage_eps)
+    return normalized.reshape(-1), {"mean": mean, "std": std}
