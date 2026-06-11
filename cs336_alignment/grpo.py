@@ -114,9 +114,16 @@ def compute_policy_gradient_loss(
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     if importance_reweighting_method != "none":
         raise NotImplementedError
-    lengths = None
-    if response_mask:
-        lengths = response_mask.sum(-1)
-    if lengths:
-        return -raw_rewards_or_advantages * policy_log_probs / lengths, {}
     return -raw_rewards_or_advantages * policy_log_probs, {}
+
+
+def aggregate_loss_across_microbatch(
+    per_token_policy_gradient_loss: torch.Tensor,
+    mask: torch.Tensor,
+    loss_normalization: Literal["sequence", "constant"] = "sequence",
+    normalization_constant: int | None = None,
+) -> torch.Tensor:
+    if loss_normalization != "sequence":
+        raise NotImplementedError
+    lengths = mask.sum(-1, keepdim=True)
+    return (per_token_policy_gradient_loss * mask / lengths).sum(-1).mean()
